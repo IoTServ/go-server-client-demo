@@ -13,6 +13,7 @@ var host *string = flag.String("host", "127.0.0.1", "target host or address")
 func pass_through(server net.Conn, browser chan net.Conn, ask chan bool) {
 	retur := true
 	b := make([]byte, 10240)
+
 	var brow net.Conn
 	for {
 		n, err := server.Read(b)
