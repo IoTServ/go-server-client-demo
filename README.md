@@ -19,7 +19,7 @@
 ![输入图片说明](http://git.oschina.net/uploads/images/2017/0322/165645_8df360fb_891703.png "在这里输入图片标题")
 
 ###3、把client.go放在家用电脑上（无公网ip，只能家用电脑80端口可以访问到本地的网站）。运行go run client.go -host 服务器ip(如服务器ip为1.1.1.1 则命令为go run client.go -host 1.1.1.1 )（如下图）
-![输入图片说明](http://git.oschina.net/uploads/images/2017/0322/165657_05e540b1_891703.png "在这里输入图片标题")
+![输入图片说明](http://git.oschina.net/uploads/images/2017/0322/170756_c0a4985f_891703.png "在这里输入图片标题")
 
 ###4、全世界任何浏览器访问公网ip:3002即可访问到家用电脑中的网站。（如服务器ip为1.1.1.1则访问1.1.1.1:3002）（如下图）
 ![输入图片说明](http://git.oschina.net/uploads/images/2017/0322/165708_62c3c386_891703.png "在这里输入图片标题")
