@@ -1,3 +1,4 @@
+//client端，运行在家里有网站的电脑中
 package main
 
 import (
@@ -6,81 +7,217 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strings"
+	"time"
 )
 
-var host *string = flag.String("host", "127.0.0.1", "target host or address")
+var host *string = flag.String("host", "127.0.0.1", "请输入服务器ip")
 
-func pass_through(server net.Conn, browser chan net.Conn, ask chan bool) {
-	retur := true
-	b := make([]byte, 10240)
-	var brow net.Conn
+//与browser相关的conn
+type browser struct {
+	conn net.Conn
+	er   chan bool
+	writ chan bool
+	recv chan []byte
+	send chan []byte
+}
+
+//读取browser过来的数据
+func (self browser) read() {
+
 	for {
-		n, err := server.Read(b)
-
-		if retur {
-
-			brow, err = net.Dial("tcp", "127.0.0.1:80")
-			if err != nil {
-				fmt.Printf("Unable to start dial, %v\n", err)
-				os.Exit(1)
-			}
-			browser <- brow
-			ask <- true
-		}
-		retur = false
+		var recv []byte = make([]byte, 10240)
+		n, err := self.conn.Read(recv)
 		if err != nil {
+
+			self.writ <- true
+			self.er <- true
+			fmt.Println("读取browser失败", err)
 			break
 		}
-		if n > 0 {
-			brow.Write(b[:n])
+		self.recv <- recv[:n]
+
+	}
+}
+
+//把数据发送给browser
+func (self browser) write() {
+
+	for {
+		var send []byte = make([]byte, 10240)
+		select {
+		case send = <-self.send:
+			self.conn.Write(send)
+		case <-self.writ:
+			fmt.Println("写入browser进程关闭")
+			break
 
 		}
+
 	}
-	fmt.Println("远程服务器其中一条tcp以关闭，关闭此条tcp链接")
-	server.Close()
-	brow.Close()
 
 }
-func pass_through1(server net.Conn, browser chan net.Conn) {
 
-	b := make([]byte, 10240)
-	brow := <-browser
+//与server相关的conn
+type server struct {
+	conn net.Conn
+	er   chan bool
+	writ chan bool
+	recv chan []byte
+	send chan []byte
+}
+
+//读取server过来的数据
+func (self *server) read() {
+	//isheart与timeout共同判断是不是自己设定的SetReadDeadline
+	var isheart bool = false
+	//20秒发一次心跳包
+	self.conn.SetReadDeadline(time.Now().Add(time.Second * 20))
 	for {
-		n, err := brow.Read(b)
+		var recv []byte = make([]byte, 10240)
+		n, err := self.conn.Read(recv)
 		if err != nil {
+			if strings.Contains(err.Error(), "timeout") && !isheart {
+				fmt.Println("发送心跳包")
+				self.conn.Write([]byte("hh"))
+				//4秒时间收心跳包
+				self.conn.SetReadDeadline(time.Now().Add(time.Second * 4))
+				isheart = true
+				continue
+			}
+
+			fmt.Println("没收到心跳包或者server关闭，关闭此条tcp", err)
+			//浏览器有可能连接上不发消息就断开，此时就发一个0，为了与服务器一直有一条tcp通路
+			self.recv <- []byte("0")
+			self.er <- true
+			self.writ <- true
 			break
 		}
-		if n > 0 {
-			server.Write(b[:n])
+		//收到心跳包
+		if recv[0] == 'h' && recv[1] == 'h' {
+			fmt.Println("收到心跳包")
+			self.conn.SetReadDeadline(time.Now().Add(time.Second * 20))
+			isheart = false
+			continue
+		}
+		self.recv <- recv[:n]
+	}
+}
+
+//把数据发送给server
+func (self server) write() {
+
+	for {
+		var send []byte = make([]byte, 10240)
+
+		select {
+		case send = <-self.send:
+			self.conn.Write(send)
+		case <-self.writ:
+			fmt.Println("写入server进程关闭")
+			break
 		}
 
 	}
-	fmt.Println("本地网站其中一条tcp以关闭，关闭此条tcp链接")
-	server.Close()
-	brow.Close()
+
 }
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	browser := make(chan net.Conn)
-	ask := make(chan bool)
 	flag.Parse()
 	if flag.NFlag() != 1 {
-		fmt.Printf("usage: -host 远程服务器ip\n")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
-	target := net.JoinHostPort(*host, "2000")
+	target := net.JoinHostPort(*host, "20012")
 	for {
+		//链接端口
+		serverconn := dail(target)
+		recv := make(chan []byte)
+		send := make(chan []byte)
+		//1个位置是为了防止两个读取线程一个退出后另一个永远卡住
+		er := make(chan bool, 1)
+		writ := make(chan bool)
+		next := make(chan bool)
+		server := &server{serverconn, er, writ, recv, send}
+		go server.read()
+		go server.write()
+		go handle(server, next)
+		<-next
+	}
 
-		server, err := net.Dial("tcp", target)
-		if err != nil {
-			fmt.Printf("Unable to dial server, %v\n", err)
-			os.Exit(1)
+}
+
+//显示错误
+func log(err error) {
+	if err != nil {
+		fmt.Printf("出现错误： %v\n", err)
+	}
+}
+
+//显示错误并退出
+func logExit(err error) {
+	if err != nil {
+		fmt.Printf("出现错误，退出线程： %v\n", err)
+		runtime.Goexit()
+	}
+}
+
+//显示错误并关闭链接，退出线程
+func logClose(err error, conn net.Conn) {
+	if err != nil {
+		fmt.Println("对方已关闭", err)
+		runtime.Goexit()
+	}
+}
+
+//链接端口
+func dail(hostport string) net.Conn {
+	conn, err := net.Dial("tcp", hostport)
+	logExit(err)
+	return conn
+}
+
+//两个socket衔接相关处理
+func handle(server *server, next chan bool) {
+	var serverrecv = make([]byte, 10240)
+	//阻塞这里等待server传来数据再链接browser
+	serverrecv = <-server.recv
+	//连接上，下一个tcp连上服务器
+	next <- true
+	fmt.Println("开启新线程，收到user的消息")
+	var browse *browser
+	//server发来数据，链接本地80端口
+	serverconn := dail("127.0.0.1:80")
+	recv := make(chan []byte)
+	send := make(chan []byte)
+	er := make(chan bool, 1)
+	writ := make(chan bool)
+	browse = &browser{serverconn, er, writ, recv, send}
+	go browse.read()
+	go browse.write()
+	browse.send <- serverrecv
+
+	for {
+		var serverrecv = make([]byte, 10240)
+		var browserrecv = make([]byte, 10240)
+		select {
+		case serverrecv = <-server.recv:
+
+			browse.send <- serverrecv
+
+		case browserrecv = <-browse.recv:
+			server.send <- browserrecv
+		case <-server.er:
+			fmt.Println("server关闭了，关闭server与browse")
+			server.conn.Close()
+			browse.conn.Close()
+			runtime.Goexit()
+		case <-browse.er:
+			fmt.Println("browse关闭了，关闭server与browse")
+			server.conn.Close()
+			browse.conn.Close()
+			runtime.Goexit()
 		}
-
-		go pass_through(server, browser, ask)
-		go pass_through1(server, browser)
-		<-ask
 	}
 }
