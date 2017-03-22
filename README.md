@@ -11,13 +11,16 @@
 5、本版本为重构版本，不需要引入额外的包，只需两个文件。代码清晰易懂，并加入大量注释。
 ##使用方法：
 ###1、配置好go语言环境，
-###2、把server.go上传到公网服务器上。运行go run server.go
+###2、把server.go上传到公网服务器上。运行go run server.go（如下图）
 ![输入图片说明](http://git.oschina.net/uploads/images/2017/0322/165645_8df360fb_891703.png "在这里输入图片标题")
-###3、把client.go放在家用电脑上（无公网ip，只能家用电脑80端口可以访问到本地的网站）。运行go run client.go -host 服务器ip(如服务器ip为1.1.1.1 则命令为go run client.go -host 1.1.1.1 )
-![输入图片说明](http://git.oschina.net/uploads/images/2017/0322/165657_05e540b1_891703.png "在这里输入图片标题")
-###4、访问公网ip:3002即可访问到家用电脑中的网站。（如服务器ip为1.1.1.1则访问1.1.1.1:3002）
+
+###3、把client.go放在家用电脑上（无公网ip，只能家用电脑80端口可以访问到本地的网站）。运行go run client.go -host 服务器ip(如服务器ip为1.1.1.1 则命令为go run client.go -host 1.1.1.1 )（如下图）
+![![输入图片说明](http://git.oschina.net/uploads/images/2017/0322/165657_05e540b1_891703.png "在这里输入图片标题")]
+
+###4、访问公网ip:3002即可访问到家用电脑中的网站。（如服务器ip为1.1.1.1则访问1.1.1.1:3002）（如下图）
 ![输入图片说明](http://git.oschina.net/uploads/images/2017/0322/165708_62c3c386_891703.png "在这里输入图片标题")
 
 ##补充：
 1.作者初入tcp网络编程。软件还不完善，如果发现bug欢迎提交issue
+
 2.另外大家觉得有帮助，可以捐助本项目请我喝杯cafe。
