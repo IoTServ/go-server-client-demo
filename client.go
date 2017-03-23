@@ -85,12 +85,11 @@ func (self *server) read() {
 				isheart = true
 				continue
 			}
-
-			fmt.Println("没收到心跳包或者server关闭，关闭此条tcp", err)
 			//浏览器有可能连接上不发消息就断开，此时就发一个0，为了与服务器一直有一条tcp通路
 			self.recv <- []byte("0")
 			self.er <- true
 			self.writ <- true
+			fmt.Println("没收到心跳包或者server关闭，关闭此条tcp", err)
 			break
 		}
 		//收到心跳包

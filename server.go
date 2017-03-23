@@ -35,11 +35,10 @@ func (self *client) read() {
 			//				self.conn.SetReadDeadline(time.Time{})
 			//				continue
 			//			}
-
-			fmt.Println("长时间未传输信息，或者client已关闭。断开并继续accept新的tcp，", err)
 			self.heart <- true
 			self.er <- true
 			self.writ <- true
+			fmt.Println("长时间未传输信息，或者client已关闭。断开并继续accept新的tcp，", err)
 		}
 		//收到心跳包hh，原样返回回复
 		if recv[0] == 'h' && recv[1] == 'h' {
