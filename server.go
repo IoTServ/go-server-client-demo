@@ -141,6 +141,9 @@ func main() {
 	log(err)
 	//第一条tcp关闭或者与浏览器建立tcp都要返回重新监听
 TOP:
+	//监听user链接
+	Uconn := make(chan net.Conn)
+	go goaccept(u, Uconn)
 	//一定要先接受client
 	fmt.Println("准备好连接了")
 	clientconnn := accept(c)
@@ -154,8 +157,7 @@ TOP:
 	client := &client{clientconnn, er, heart, false, writ, recv, send}
 	go client.read()
 	go client.write()
-	Uconn := make(chan net.Conn)
-	go goaccept(u, Uconn)
+
 	//这里可能需要处理心跳
 	for {
 		select {
