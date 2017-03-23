@@ -202,8 +202,10 @@ func handle(server *server, next chan bool) {
 		var browserrecv = make([]byte, 10240)
 		select {
 		case serverrecv = <-server.recv:
+			if serverrecv[0] != '0' {
 
-			browse.send <- serverrecv
+				browse.send <- serverrecv
+			}
 
 		case browserrecv = <-browse.recv:
 			server.send <- browserrecv
