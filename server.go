@@ -148,7 +148,7 @@ TOP:
 	fmt.Println("client已连接", clientconnn.LocalAddr().String())
 	recv := make(chan []byte)
 	send := make(chan []byte)
-	heart := make(chan bool)
+	heart := make(chan bool, 1)
 	//1个位置是为了防止两个读取线程一个退出后另一个永远卡住
 	er := make(chan bool, 1)
 	writ := make(chan bool)
