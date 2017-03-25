@@ -32,7 +32,7 @@ func (self browser) read() {
 
 			self.writ <- true
 			self.er <- true
-			fmt.Println("读取browser失败", err)
+			//fmt.Println("读取browser失败", err)
 			break
 		}
 		self.recv <- recv[:n]
@@ -49,7 +49,7 @@ func (self browser) write() {
 		case send = <-self.send:
 			self.conn.Write(send)
 		case <-self.writ:
-			fmt.Println("写入browser进程关闭")
+			//fmt.Println("写入browser进程关闭")
 			break
 
 		}
@@ -78,7 +78,7 @@ func (self *server) read() {
 		n, err := self.conn.Read(recv)
 		if err != nil {
 			if strings.Contains(err.Error(), "timeout") && !isheart {
-				fmt.Println("发送心跳包")
+				//fmt.Println("发送心跳包")
 				self.conn.Write([]byte("hh"))
 				//4秒时间收心跳包
 				self.conn.SetReadDeadline(time.Now().Add(time.Second * 4))
@@ -89,12 +89,12 @@ func (self *server) read() {
 			self.recv <- []byte("0")
 			self.er <- true
 			self.writ <- true
-			fmt.Println("没收到心跳包或者server关闭，关闭此条tcp", err)
+			//fmt.Println("没收到心跳包或者server关闭，关闭此条tcp", err)
 			break
 		}
 		//收到心跳包
 		if recv[0] == 'h' && recv[1] == 'h' {
-			fmt.Println("收到心跳包")
+			//fmt.Println("收到心跳包")
 			self.conn.SetReadDeadline(time.Now().Add(time.Second * 20))
 			isheart = false
 			continue
@@ -113,7 +113,7 @@ func (self server) write() {
 		case send = <-self.send:
 			self.conn.Write(send)
 		case <-self.writ:
-			fmt.Println("写入server进程关闭")
+			//fmt.Println("写入server进程关闭")
 			break
 		}
 
@@ -165,7 +165,7 @@ func logExit(err error) {
 //显示错误并关闭链接，退出线程
 func logClose(err error, conn net.Conn) {
 	if err != nil {
-		fmt.Println("对方已关闭", err)
+		//fmt.Println("对方已关闭", err)
 		runtime.Goexit()
 	}
 }
@@ -181,10 +181,11 @@ func dail(hostport string) net.Conn {
 func handle(server *server, next chan bool) {
 	var serverrecv = make([]byte, 10240)
 	//阻塞这里等待server传来数据再链接browser
+	fmt.Println("等待server发来消息")
 	serverrecv = <-server.recv
 	//连接上，下一个tcp连上服务器
 	next <- true
-	fmt.Println("开启新线程，收到user的消息")
+	//fmt.Println("开始新的tcp链接，发来的消息是：", string(serverrecv))
 	var browse *browser
 	//server发来数据，链接本地80端口
 	serverconn := dail("127.0.0.1:80")
@@ -210,12 +211,12 @@ func handle(server *server, next chan bool) {
 		case browserrecv = <-browse.recv:
 			server.send <- browserrecv
 		case <-server.er:
-			fmt.Println("server关闭了，关闭server与browse")
+			//fmt.Println("server关闭了，关闭server与browse")
 			server.conn.Close()
 			browse.conn.Close()
 			runtime.Goexit()
 		case <-browse.er:
-			fmt.Println("browse关闭了，关闭server与browse")
+			//fmt.Println("browse关闭了，关闭server与browse")
 			server.conn.Close()
 			browse.conn.Close()
 			runtime.Goexit()

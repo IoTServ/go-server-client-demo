@@ -38,7 +38,7 @@ func (self *client) read() {
 			self.heart <- true
 			self.er <- true
 			self.writ <- true
-			fmt.Println("长时间未传输信息，或者client已关闭。断开并继续accept新的tcp，", err)
+			//fmt.Println("长时间未传输信息，或者client已关闭。断开并继续accept新的tcp，", err)
 		}
 		//收到心跳包hh，原样返回回复
 		if recv[0] == 'h' && recv[1] == 'h' {
@@ -80,7 +80,7 @@ func (self client) write() {
 		case send = <-self.send:
 			self.conn.Write(send)
 		case <-self.writ:
-			fmt.Println("写入client进程关闭")
+			//fmt.Println("写入client进程关闭")
 			break
 
 		}
@@ -99,15 +99,16 @@ type user struct {
 
 //读取user过来的数据
 func (self user) read() {
-
+	self.conn.SetReadDeadline(time.Now().Add(time.Millisecond * 1300))
 	for {
 		var recv []byte = make([]byte, 10240)
 		n, err := self.conn.Read(recv)
+		self.conn.SetReadDeadline(time.Time{})
 		if err != nil {
 
 			self.er <- true
 			self.writ <- true
-			fmt.Println("读取user失败", err)
+			//fmt.Println("读取user失败", err)
 
 			break
 		}
@@ -124,7 +125,7 @@ func (self user) write() {
 		case send = <-self.send:
 			self.conn.Write(send)
 		case <-self.writ:
-			fmt.Println("写入user进程关闭")
+			//fmt.Println("写入user进程关闭")
 			break
 
 		}
@@ -207,7 +208,7 @@ func log(err error) {
 //显示错误并退出
 func logExit(err error) {
 	if err != nil {
-		fmt.Printf("出现错误，退出线程： %v\n", err)
+		//fmt.Printf("出现错误，退出线程： %v\n", err)
 		runtime.Goexit()
 	}
 }
@@ -215,7 +216,7 @@ func logExit(err error) {
 //显示错误并关闭链接，退出线程
 func logClose(err error, conn net.Conn) {
 	if err != nil {
-		fmt.Println("对方已关闭", err)
+		//fmt.Println("对方已关闭", err)
 		runtime.Goexit()
 	}
 }
@@ -230,16 +231,17 @@ func handle(client *client, user *user) {
 		case clientrecv = <-client.recv:
 			user.send <- clientrecv
 		case userrecv = <-user.recv:
+			//fmt.Println("浏览器发来的消息", string(userrecv))
 			client.send <- userrecv
 			//user出现错误，关闭两端socket
 		case <-user.er:
-			fmt.Println("user关闭了，关闭client与user")
+			//fmt.Println("user关闭了，关闭client与user")
 			client.conn.Close()
 			user.conn.Close()
 			runtime.Goexit()
 			//client出现错误，关闭两端socket
 		case <-client.er:
-			fmt.Println("client关闭了，关闭client与user")
+			//fmt.Println("client关闭了，关闭client与user")
 			user.conn.Close()
 			client.conn.Close()
 			runtime.Goexit()
