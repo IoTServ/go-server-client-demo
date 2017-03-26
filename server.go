@@ -99,7 +99,7 @@ type user struct {
 
 //读取user过来的数据
 func (self user) read() {
-	self.conn.SetReadDeadline(time.Now().Add(time.Millisecond * 1300))
+	self.conn.SetReadDeadline(time.Now().Add(time.Millisecond * 800))
 	for {
 		var recv []byte = make([]byte, 10240)
 		n, err := self.conn.Read(recv)
